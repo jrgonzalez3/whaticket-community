@@ -11,25 +11,33 @@ interface ContactData {
   email?: string;
   number?: string;
   name?: string;
+  active?: boolean;  
   extraInfo?: ExtraInfo[];
+  disableBot?: boolean
 }
 
 interface Request {
   contactData: ContactData;
   contactId: string;
+  companyId: number;
 }
 
 const UpdateContactService = async ({
   contactData,
-  contactId
+  contactId,
+  companyId
 }: Request): Promise<Contact> => {
-  const { email, name, number, extraInfo } = contactData;
+  const { email, name, number, extraInfo, active, disableBot } = contactData;
 
   const contact = await Contact.findOne({
     where: { id: contactId },
-    attributes: ["id", "name", "number", "email", "profilePicUrl"],
+    attributes: ["id", "name", "number", "email", "companyId", "profilePicUrl", "active","messengerId", "instagramId"],
     include: ["extraInfo"]
   });
+
+  if (contact?.companyId !== companyId) {
+    throw new AppError("No se puede actualizar un registro de otra empresa");
+  }
 
   if (!contact) {
     throw new AppError("ERR_NO_CONTACT_FOUND", 404);
@@ -37,7 +45,7 @@ const UpdateContactService = async ({
 
   if (extraInfo) {
     await Promise.all(
-      extraInfo.map(async info => {
+      extraInfo.map(async (info: any) => {
         await ContactCustomField.upsert({ ...info, contactId: contact.id });
       })
     );
@@ -56,11 +64,13 @@ const UpdateContactService = async ({
   await contact.update({
     name,
     number,
-    email
+    email,
+	active,
+  disableBot
   });
 
   await contact.reload({
-    attributes: ["id", "name", "number", "email", "profilePicUrl"],
+    attributes: ["id", "name", "number", "email", "profilePicUrl","active","messengerId", "instagramId"],
     include: ["extraInfo"]
   });
 

@@ -12,15 +12,20 @@ interface MessageData {
   read?: boolean;
   mediaType?: string;
   mediaUrl?: string;
+  ack?: number;
+  queueId?: number;
+  isForwarded?: boolean;  
 }
 interface Request {
   messageData: MessageData;
+  companyId: number;
 }
 
 const CreateMessageService = async ({
-  messageData
+  messageData,
+  companyId
 }: Request): Promise<Message> => {
-  await Message.upsert(messageData);
+  await Message.upsert({ ...messageData, companyId });
 
   const message = await Message.findByPk(messageData.id, {
     include: [
@@ -46,15 +51,21 @@ const CreateMessageService = async ({
     ]
   });
 
+  if (message.ticket.queueId !== null && message.queueId === null) {
+    await message.update({ queueId: message.ticket.queueId });
+  }
+
   if (!message) {
     throw new Error("ERR_CREATING_MESSAGE");
   }
 
   const io = getIO();
   io.to(message.ticketId.toString())
-    .to(message.ticket.status)
-    .to("notification")
-    .emit("appMessage", {
+    .to(`company-${companyId}-${message.ticket.status}`)
+    .to(`company-${companyId}-notification`)
+    .to(`queue-${message.ticket.queueId}-${message.ticket.status}`)
+    .to(`queue-${message.ticket.queueId}-notification`)
+    .emit(`company-${companyId}-appMessage`, {
       action: "create",
       message,
       ticket: message.ticket,

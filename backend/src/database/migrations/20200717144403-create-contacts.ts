@@ -15,8 +15,7 @@ module.exports = {
       },
       number: {
         type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
+        allowNull: false
       },
       profilePicUrl: {
         type: DataTypes.STRING
@@ -28,6 +27,14 @@ module.exports = {
       updatedAt: {
         type: DataTypes.DATE,
         allowNull: false
+      },
+      messengerId: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      instagramId: {
+        type: DataTypes.STRING,
+        allowNull: true
       }
     });
   },
